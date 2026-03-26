@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>FOB双币报价系统 | 成本细分 + 记录追溯</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f4f7fc;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            padding: 36px 28px;
+            color: #1a2c3e;
+        }
+
+        /* 对称网格布局：左右严格等宽等高弹性 */
+        .dashboard {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            align-items: stretch;
+        }
+
+        /* 卡片均等高度，flex列布局 */
+        .card {
+            background: #ffffff;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e9edf2;
+            backdrop-filter: blur(0px);
+        }
+
+        .card-header {
+            padding: 24px 30px 16px 30px;
+            border-bottom: 1px solid #eef2f8;
+        }
+
+        .card-header h2 {
+            font-size: 1.55rem;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+            background: linear-gradient(130deg, #1c4e70, #2a6b8f);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .card-header p {
+            font-size: 0.85rem;
+            color: #5c6f8c;
+            margin-top: 8px;
+        }
+
+        .card-content {
+            padding: 26px 30px 32px 30px;
+            flex: 1;
+        }
+
+        /* 表单组件 */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 18px;
+        }
+
+        .form-field {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #2c4c6c;
+            display: block;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 14px;
+            font-weight: 500;
+            color: #5f7f9e;
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 12px 12px 32px;
+            font-size: 0.95rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 24px;
+            background: #ffffff;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-weight: 500;
+            color: #0f2b3b;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3a86b0;
+            box-shadow: 0 0 0 3px rgba(58,134,176,0.12);
+        }
+
+        /* 国内费用细分网格 */
+        .subcost-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 18px;
+            background: #fafdff;
+            padding: 18px 20px;
+            border-radius: 28px;
+            border: 1px solid #eef3fc;
+            margin: 8px 0 12px 0;
+        }
+
+        .subcost-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .subcost-item label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #3c647e;
+            margin-bottom: 6px;
+        }
+
+        .subcost-item input {
+            padding: 10px 8px 10px 32px;
+            border-radius: 20px;
+        }
+
+        .total-display {
+            background: #eef3fa;
+            border-radius: 24px;
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin: 16px 0 10px 0;
+        }
+
+        .total-display span:first-child {
+            font-weight: 700;
+            color: #1c5a7a;
+        }
+
+        .total-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #125072;
+        }
+
+        /* 利润率调节区 */
+        .profit-section {
+            background: #f5f9fe;
+            border-radius: 28px;
+            padding: 18px 24px;
+            margin: 24px 0 20px 0;
+        }
+
+        .profit-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .profit-label {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1b4d6e;
+        }
+
+        .rate-buttons {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: white;
+            padding: 6px 18px;
+            border-radius: 60px;
+            border: 1px solid #dce5ef;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .rate-btn {
+            background: #eef2fa;
+            border: none;
+            font-size: 1.5rem;
+            font-weight: 700;
+            width: 44px;
+            height: 44px;
+            border-radius: 44px;
+            cursor: pointer;
+            transition: 0.15s;
+            color: #1f6392;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .rate-btn:hover:not(:disabled) {
+            background: #d9e2f0;
+            transform: scale(0.96);
+        }
+
+        .rate-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .profit-percent {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-family: monospace;
+            min-width: 85px;
+            text-align: center;
+            color: #115e83;
+        }
+
+        .profit-percent small {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* 汇率双币区域 */
+        .exchange-row {
+            background: #ffffff;
+            border: 1px solid #e2edf6;
+            border-radius: 24px;
+            padding: 12px 20px;
+            margin: 20px 0 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .exchange-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafd;
+            padding: 5px 16px;
+            border-radius: 40px;
+        }
+
+        .exchange-item label {
+            margin-bottom: 0;
+            font-size: 0.8rem;
+        }
+
+        .exchange-item input {
+            width: 110px;
+            padding: 8px 8px 8px 20px;
+            border-radius: 28px;
+            font-weight: 600;
+        }
+
+        /* 双币报价预览 */
+        .preview-card {
+            background: linear-gradient(115deg, #eef4fa, #e3edf6);
+            border-radius: 28px;
+            padding: 20px 24px;
+            margin: 20px 0 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .preview-block {
+            flex: 1;
+            text-align: center;
+            background: rgba(255,255,255,0.55);
+            border-radius: 24px;
+            padding: 12px 8px;
+        }
+
+        .preview-label-sm {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #2c6e8f;
+        }
+
+        .preview-price {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: #0c4a6e;
+            letter-spacing: -0.3px;
+        }
+
+        .btn-primary {
+            background: #1e617f;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 44px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            width: 100%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            margin-top: 6px;
+        }
+
+        .btn-primary:hover {
+            background: #0f4b66;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #eef2f8;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 36px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #1e5a77;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f2;
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .record-list {
+            max-height: 560px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .record-item {
+            background: #ffffff;
+            border: 1px solid #e8edf3;
+            border-radius: 24px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+            transition: all 0.15s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+        }
+
+        .record-item:hover {
+            border-color: #cbdde9;
+            background: #fefefe;
+        }
+
+        .record-time {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #5c7f9c;
+            margin-bottom: 8px;
+            letter-spacing: 0.2px;
+        }
+
+        .record-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .record-fob {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #1a5f7a;
+            background: #ecf5fb;
+            padding: 2px 12px;
+            border-radius: 40px;
+        }
+
+        .record-profit {
+            background: #eef2fa;
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #1b5a7a;
+        }
+
+        .record-detail {
+            font-size: 0.7rem;
+            color: #627f9b;
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            border-top: 1px dashed #eef2f8;
+            padding-top: 10px;
+            margin-top: 8px;
+        }
+
+        .delete-record {
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #98aec5;
+            transition: 0.15s;
+            float: right;
+        }
+
+        .delete-record:hover {
+            color: #c7452c;
+        }
+
+        .empty-records {
+            text-align: center;
+            padding: 56px 20px;
+            color: #8da3bf;
+            font-size: 0.85rem;
+        }
+
+        hr {
+            margin: 10px 0;
+            border-top: 1px solid #e6edf4;
+        }
+
+        @media (max-width: 880px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+                gap: 28px;
+            }
+            body {
+                padding: 20px 16px;
+            }
+            .preview-price {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <!-- 左侧：参数配置区域 -->
+    <div class="card">
+        <div class="card-header">
+            <h2>📊 FOB 报价参数</h2>
+            <p>货物成本 + 国内细分费用 · 成本加成利润率 (≥15%)</p>
+        </div>
+        <div class="card-content">
+            <!-- 货物总成本 -->
+            <div class="form-group">
+                <label>🏭 货物总成本 (CNY)</label>
+                <div class="input-wrapper">
+                    <span class="currency-symbol">¥</span>
+                    <input type="number" id="goodsCost" value="12800.00" step="200" min="0">
+                </div>
+            </div>
+
+            <!-- 国内费用细分 -->
+            <label>🚛 国内费用明细 (逐项填写)</label>
+            <div class="subcost-grid">
+                <div class="subcost-item">
+                    <label>国内运输费</label>
+                    <div class="input-wrapper"><span class="currency-symbol">¥</span><input type="number" id="transportFee" value="850.00" step="50" min="0"></div>
+                </div>
+                <div class="subcost-item">
+                    <label>港口操作费</label>
+                    <div class="input-wrapper"><span class="currency-symbol">¥</span><input type="number" id="portFee" value="1200.00" step="50" min="0"></div>
+                </div>
+                <div class="subcost-item">
+                    <label>报关费</label>
+                    <div class="input-wrapper"><span class="currency-symbol">¥</span><input type="number" id="customsFee" value="350.00" step="20" min="0"></div>
+                </div>
+                <div class="subcost-item">
+                    <label>文件/订舱费</label>
+                    <div class="input-wrapper"><span class="currency-symbol">¥</span><input type="number" id="docFee" value="280.00" step="20" min="0"></div>
+                </div>
+                <div class="subcost-item">
+                    <label>其他杂费</label>
+                    <div class="input-wrapper"><span class="currency-symbol">¥</span><input type="number" id="otherFee" value="320.00" step="30" min="0"></div>
+                </div>
+            </div>
+            
+            <!-- 国内费用合计 -->
+            <div class="total-display">
+                <span>📋 国内费用合计</span>
+                <span class="total-value" id="domesticTotal">¥ 0.00</span>
+            </div>
+
+            <!-- 利润率调节 (成本加成，不低于15%) -->
+            <div class="profit-section">
+                <div class="profit-control">
+                    <span class="profit-label">📈 成本利润率 (加成率)</span>
+                    <div class="rate-buttons">
+                        <button class="rate-btn" id="profitMinusBtn">–</button>
+                        <div class="profit-percent" id="profitRateDisplay">15<small>%</small></div>
+                        <button class="rate-btn" id="profitPlusBtn">+</button>
+                    </div>
+                    <span style="font-size:0.7rem; color:#3f6e8c;">最低15% · 单击±1% (基于总成本)</span>
+                </div>
+                <div style="font-size:0.68rem; margin-top: 12px; color:#4c6f8f; text-align:center;">公式: FOB(¥) = 总成本 × (1 + 利润率)</div>
+            </div>
+
+            <!-- 双币汇率模块 -->
+            <div class="exchange-row">
+                <div class="exchange-item">
+                    <label>💵 美元汇率 (USD/CNY)</label>
+                    <input type="number" id="exchangeRate" value="7.25" step="0.01" min="0.01">
+                </div>
+                <div style="font-size:0.7rem; color:#537a99;">1 美元 = ? 人民币</div>
+            </div>
+
+            <!-- 双币预览卡片 -->
+            <div class="preview-card">
+                <div class="preview-block">
+                    <div class="preview-label-sm">🇨🇳 FOB 人民币价</div>
+                    <div class="preview-price" id="previewCNY">¥ 0.00</div>
+                </div>
+                <div class="preview-block">
+                    <div class="preview-label-sm">🇺🇸 FOB 美元价 (USD)</div>
+                    <div class="preview-price" id="previewUSD">$ 0.00</div>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="quoteRecordBtn">📌 记录本次报价 (双币存档)</button>
+            <div style="margin-top: 14px; font-size:0.68rem; text-align:center; color:#6f8aa8;">
+                每次报价将记录时间、成本明细、利润率及双币价格
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧：报价记录区域 (对称等高分栏) -->
+    <div class="card">
+        <div class="card-header">
+            <div class="record-header">
+                <h2>🗂️ 报价历史记录</h2>
+                <button class="btn-secondary" id="clearAllRecordsBtn">清除全部记录</button>
+            </div>
+            <p>自动标记日期时间 · 支持双币追溯</p>
+        </div>
+        <div class="card-content" style="padding-top: 10px;">
+            <div id="recordsContainer" class="record-list">
+                <div class="empty-records">✨ 暂无报价记录，填写左侧数据并点击「记录本次报价」</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- DOM 绑定 ----------
+    // 成本输入
+    const goodsCostInput = document.getElementById('goodsCost');
+    const transportInput = document.getElementById('transportFee');
+    const portInput = document.getElementById('portFee');
+    const customsInput = document.getElementById('customsFee');
+    const docInput = document.getElementById('docFee');
+    const otherInput = document.getElementById('otherFee');
+    const domesticTotalSpan = document.getElementById('domesticTotal');
+    const previewCNYSpan = document.getElementById('previewCNY');
+    const previewUSDSpan = document.getElementById('previewUSD');
+    const profitRateDisplay = document.getElementById('profitRateDisplay');
+    const profitPlusBtn = document.getElementById('profitPlusBtn');
+    const profitMinusBtn = document.getElementById('profitMinusBtn');
+    const exchangeRateInput = document.getElementById('exchangeRate');
+    
+    const quoteRecordBtn = document.getElementById('quoteRecordBtn');
+    const clearAllBtn = document.getElementById('clearAllRecordsBtn');
+    const recordsContainer = document.getElementById('recordsContainer');
+    
+    // 状态变量
+    let currentProfitRate = 15;      // 成本利润率百分比 (不低于15)
+    let quotationRecords = [];        // 存储记录对象
+
+    // 辅助：获取国内费用总和
+    function getDomesticTotal() {
+        const transport = parseFloat(transportInput.value) || 0;
+        const port = parseFloat(portInput.value) || 0;
+        const customs = parseFloat(customsInput.value) || 0;
+        const doc = parseFloat(docInput.value) || 0;
+        const other = parseFloat(otherInput.value) || 0;
+        return transport + port + customs + doc + other;
+    }
+    
+    // 更新国内合计显示
+    function updateDomesticTotalDisplay() {
+        const total = getDomesticTotal();
+        domesticTotalSpan.innerText = `¥ ${total.toFixed(2)}`;
+        return total;
+    }
+    
+    // 获取总成本 (货物+国内)
+    function getTotalCost() {
+        const goods = parseFloat(goodsCostInput.value) || 0;
+        const domestic = getDomesticTotal();
+        return goods + domestic;
+    }
+    
+    // 计算FOB人民币 (成本加成利润率)
+    function calculateFOB_CNY() {
+        const totalCost = getTotalCost();
+        const profitDecimal = currentProfitRate / 100;
+        const fobCny = totalCost * (1 + profitDecimal);
+        return fobCny;
+    }
+    
+    // 获取当前汇率
+    function getExchangeRate() {
+        let rate = parseFloat(exchangeRateInput.value);
+        if (isNaN(rate) || rate <= 0) rate = 7.25;
+        return rate;
+    }
+    
+    // 更新预览双币
+    function refreshPreview() {
+        updateDomesticTotalDisplay();
+        const fobCny = calculateFOB_CNY();
+        const rate = getExchangeRate();
+        const fobUsd = fobCny / rate;
+        previewCNYSpan.innerText = `¥ ${fobCny.toFixed(2)}`;
+        previewUSDSpan.innerText = `$ ${fobUsd.toFixed(2)}`;
+        profitRateDisplay.innerHTML = `${currentProfitRate}<small>%</small>`;
+        
+        // 利润率按钮禁用逻辑: 不低于15，上限99避免过大
+        profitPlusBtn.disabled = (currentProfitRate >= 99);
+        profitMinusBtn.disabled = (currentProfitRate <= 15);
+    }
+    
+    // 调整利润率 (±1)
+    function adjustProfitRate(delta) {
+        let newRate = currentProfitRate + delta;
+        if (newRate < 15) newRate = 15;
+        if (newRate > 99) newRate = 99;
+        if (newRate !== currentProfitRate) {
+            currentProfitRate = newRate;
+            refreshPreview();
+        }
+    }
+    
+    // 格式化时间
+    function getFormattedTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    }
+    
+    // 记录当前报价 (包含双币)
+    function recordCurrentQuote() {
+        const goodsCost = parseFloat(goodsCostInput.value) || 0;
+        const domesticTotal = getDomesticTotal();
+        const totalCost = getTotalCost();
+        
+        if (totalCost <= 0.01) {
+            alert("⚠️ 总成本必须大于0，请填写货物成本或国内费用");
+            return false;
+        }
+        
+        const fobCny = calculateFOB_CNY();
+        if (!isFinite(fobCny) || fobCny <= 0) {
+            alert("报价计算异常，请检查成本或利润率");
+            return false;
+        }
+        const rate = getExchangeRate();
+        const fobUsd = fobCny / rate;
+        
+        // 记录细分摘要 (用于显示)
+        const detailSummary = `货本:¥${goodsCost.toFixed(2)} / 国内费:¥${domesticTotal.toFixed(2)} / 总成本:¥${totalCost.toFixed(2)}`;
+        
+        const record = {
+            id: Date.now() + Math.random() * 10000,
+            timestamp: getFormattedTime(),
+            fobCny: fobCny,
+            fobUsd: fobUsd,
+            profitRate: currentProfitRate,
+            totalCost: totalCost,
+            goodsCost: goodsCost,
+            domesticTotal: domesticTotal,
+            exchangeRate: rate,
+            detailSummary: detailSummary
+        };
+        
+        quotationRecords.unshift(record); // 最新在上方
+        renderRecords();
+        return true;
+    }
+    
+    // 删除单条
+    function deleteRecordById(recordId) {
+        quotationRecords = quotationRecords.filter(rec => rec.id !== recordId);
+        renderRecords();
+    }
+    
+    // 清空所有记录
+    function clearAllRecords() {
+        if (quotationRecords.length === 0) {
+            alert("暂无记录可清除");
+            return;
+        }
+        if (confirm("🗑️ 确定清除全部报价记录吗？")) {
+            quotationRecords = [];
+            renderRecords();
+        }
+    }
+    
+    // 渲染右侧记录面板 (双币显示)
+    function renderRecords() {
+        if (!recordsContainer) return;
+        if (quotationRecords.length === 0) {
+            recordsContainer.innerHTML = `<div class="empty-records">📭 暂无报价记录，点击左侧「记录本次报价」生成双币快照</div>`;
+            return;
+        }
+        
+        let html = '';
+        for (let rec of quotationRecords) {
+            const profitShow = `${rec.profitRate}% (成本加成)`;
+            const fobCnyFormatted = `¥ ${rec.fobCny.toFixed(2)}`;
+            const fobUsdFormatted = `$ ${rec.fobUsd.toFixed(2)}`;
+            const costInfo = `总成本: ¥${rec.totalCost.toFixed(2)} | 汇率 ${rec.exchangeRate.toFixed(4)}`;
+            
+            html += `
+                <div class="record-item" data-id="${rec.id}">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div class="record-time">🕒 ${rec.timestamp}</div>
+                        <button class="delete-record" data-id="${rec.id}" title="删除此条记录">🗑️</button>
+                    </div>
+                    <div class="record-main">
+                        <span class="record-fob">${fobCnyFormatted} / ${fobUsdFormatted}</span>
+                        <span class="record-profit">利润率 ${profitShow}</span>
+                    </div>
+                    <div class="record-detail">
+                        <span>📦 ${rec.detailSummary}</span>
+                        <span>💱 ${costInfo}</span>
+                    </div>
+                </div>
+            `;
+        }
+        recordsContainer.innerHTML = html;
+        
+        // 动态绑定删除事件
+        document.querySelectorAll('.delete-record').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseFloat(btn.getAttribute('data-id'));
+                if (!isNaN(id)) deleteRecordById(id);
+            });
+        });
+    }
+    
+    // 绑定所有输入变化事件
+    function bindInputEvents() {
+        const costInputs = [goodsCostInput, transportInput, portInput, customsInput, docInput, otherInput, exchangeRateInput];
+        costInputs.forEach(input => {
+            input.addEventListener('input', () => refreshPreview());
+        });
+    }
+    
+    function bindButtons() {
+        profitPlusBtn.addEventListener('click', () => adjustProfitRate(1));
+        profitMinusBtn.addEventListener('click', () => adjustProfitRate(-1));
+        quoteRecordBtn.addEventListener('click', () => recordCurrentQuote());
+        clearAllBtn.addEventListener('click', clearAllRecords);
+    }
+    
+    // 初始化
+    function init() {
+        currentProfitRate = 15;
+        bindInputEvents();
+        bindButtons();
+        quotationRecords = [];
+        refreshPreview();
+        renderRecords();
+        // 额外防呆: 确保利润率不小于15约束在ui生效
+    }
+    
+    init();
+</script>
+</body>
+</html>
